@@ -3,12 +3,6 @@
 -- Run: mysql -u root -p < database/schema.sql
 -- =============================================================================
 
-CREATE DATABASE IF NOT EXISTS taskvoice
-  CHARACTER SET utf8mb4
-  COLLATE utf8mb4_unicode_ci;
-
-USE taskvoice;
-
 SET FOREIGN_KEY_CHECKS = 0;
 
 -- =============================================================================
