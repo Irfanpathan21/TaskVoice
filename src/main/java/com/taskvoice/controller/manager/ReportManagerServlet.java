@@ -32,9 +32,9 @@ public class ReportManagerServlet extends HttpServlet {
 
         User manager = SessionUtil.getUser(req.getSession(false));
         LocalDate to   = (toStr != null && !toStr.isBlank()) ? LocalDate.parse(toStr) : LocalDate.now();
-        LocalDate from = (fromStr != null && !fromStr.isBlank()) ? LocalDate.parse(fromStr) : to.minusDays(30);
+        LocalDate from = (fromStr != null && !fromStr.isBlank()) ? LocalDate.parse(fromStr) : to.minusDays(60);
 
-        Integer targetUserId = manager.getId();
+        Integer targetUserId = null;
         if (empIdStr != null && !empIdStr.isBlank()) {
             try { targetUserId = Integer.parseInt(empIdStr); } catch (NumberFormatException ignored) {}
         }
@@ -42,7 +42,7 @@ public class ReportManagerServlet extends HttpServlet {
         try {
             if ("csv".equalsIgnoreCase(format)) {
                 byte[] data;
-                if (empIdStr != null && !empIdStr.isBlank()) {
+                if (targetUserId != null) {
                     data = reportService.generateCsvReport(targetUserId, from, to);
                 } else {
                     data = reportService.generateTeamCsvReport(manager.getId(), from, to);
@@ -51,7 +51,12 @@ public class ReportManagerServlet extends HttpServlet {
                 resp.setHeader("Content-Disposition", "attachment; filename=\"taskvoice_timesheet_report_" + from + "_to_" + to + ".csv\"");
                 resp.getOutputStream().write(data);
             } else if ("pdf".equalsIgnoreCase(format)) {
-                byte[] data = reportService.generatePdfReport(targetUserId, from, to);
+                byte[] data;
+                if (targetUserId != null) {
+                    data = reportService.generatePdfReport(targetUserId, from, to);
+                } else {
+                    data = reportService.generateTeamPdfReport(manager.getId(), from, to);
+                }
                 resp.setContentType("application/pdf");
                 resp.setHeader("Content-Disposition", "attachment; filename=\"taskvoice_work_statement_" + from + "_to_" + to + ".pdf\"");
                 resp.getOutputStream().write(data);

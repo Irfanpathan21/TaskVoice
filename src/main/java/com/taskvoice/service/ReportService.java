@@ -28,6 +28,13 @@ public class ReportService {
         return PdfBuilder.generateWorkStatement(user, from, to, entries, tasks);
     }
 
+    public byte[] generateTeamPdfReport(int managerId, LocalDate from, LocalDate to) throws Exception {
+        User manager = userDAO.findById(managerId).orElseThrow();
+        List<TimesheetEntry> entries = timesheetDAO.findByManagerTeamAndRange(managerId, from, to);
+        List<Task> tasks = taskDAO.findByManagerTeam(managerId, 1, 1000);
+        return PdfBuilder.generateWorkStatement(manager, from, to, entries, tasks);
+    }
+
     public byte[] generateCsvReport(int userId, LocalDate from, LocalDate to) {
         List<TimesheetEntry> entries = timesheetDAO.findByUserAndRange(userId, from, to);
         return CsvBuilder.generateTimesheetCsv(entries);
