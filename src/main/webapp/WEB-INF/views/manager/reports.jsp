@@ -25,6 +25,16 @@
         <div class="glass-card">
           <form action="${pageContext.request.contextPath}/manager/reports" method="GET">
             <div style="margin-bottom: 20px;">
+              <label style="display:block; font-size:12px; font-weight:600; color:var(--text-secondary); margin-bottom:6px;">REPORT SCOPE</label>
+              <select name="employeeId" class="form-control">
+                <option value="">-- Whole Team Report (All Team Members) --</option>
+                <c:forEach var="m" items="${team}">
+                  <option value="${m.id}"><c:out value="${m.name}"/> (<c:out value="${m.employeeNo}"/></option>
+                </c:forEach>
+              </select>
+            </div>
+
+            <div style="margin-bottom: 20px;">
               <label style="display:block; font-size:12px; font-weight:600; color:var(--text-secondary); margin-bottom:6px;">EXPORT FORMAT</label>
               <select name="format" class="form-control">
                 <option value="pdf">Corporate Work Statement (PDF)</option>

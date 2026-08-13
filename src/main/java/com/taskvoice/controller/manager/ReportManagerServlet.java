@@ -25,12 +25,12 @@ public class ReportManagerServlet extends HttpServlet {
         String toStr   = req.getParameter("to");
         String empIdStr = req.getParameter("employeeId");
 
+        User manager = SessionUtil.getUser(req.getSession(false));
         if (format == null) {
+            req.setAttribute("team", new com.taskvoice.service.EmployeeService().findTeam(manager.getId()));
             req.getRequestDispatcher("/WEB-INF/views/manager/reports.jsp").forward(req, resp);
             return;
         }
-
-        User manager = SessionUtil.getUser(req.getSession(false));
         LocalDate to   = (toStr != null && !toStr.isBlank()) ? LocalDate.parse(toStr) : LocalDate.now();
         LocalDate from = (fromStr != null && !fromStr.isBlank()) ? LocalDate.parse(fromStr) : to.minusDays(60);
 
