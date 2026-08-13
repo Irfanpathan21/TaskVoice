@@ -43,16 +43,17 @@ public class DBPoolListener implements ServletContextListener {
         ds.setUsername(username);
         ds.setPassword(password);
 
-        // Pool configuration
-        ds.setInitialSize(3);
-        ds.setMaxTotal(20);
+        // Optimized Pool configuration for cloud databases
+        ds.setInitialSize(5);
+        ds.setMaxTotal(25);
         ds.setMaxIdle(10);
-        ds.setMinIdle(3);
-        ds.setMaxWaitMillis(10_000);
+        ds.setMinIdle(5);
+        ds.setMaxWaitMillis(5_000);
         ds.setValidationQuery("SELECT 1");
-        ds.setTestOnBorrow(true);
+        ds.setTestOnBorrow(false);
         ds.setTestWhileIdle(true);
-        ds.setTimeBetweenEvictionRunsMillis(60_000);
+        ds.setTimeBetweenEvictionRunsMillis(30_000);
+        ds.setMinEvictableIdleTimeMillis(60_000);
 
         dataSource = ds;
         sce.getServletContext().setAttribute("dataSource", ds);
