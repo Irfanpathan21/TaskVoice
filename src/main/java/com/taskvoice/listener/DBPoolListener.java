@@ -26,7 +26,15 @@ public class DBPoolListener implements ServletContextListener {
         String password = ConfigListener.get("DB_PASSWORD");
 
         if (url == null || url.isBlank()) {
-            throw new RuntimeException("DB_URL is not configured. Check your .env file.");
+            url = System.getenv("DB_URL");
+            username = System.getenv("DB_USERNAME");
+            password = System.getenv("DB_PASSWORD");
+        }
+
+        if (url == null || url.isBlank()) {
+            url = "jdbc:mysql://localhost:3306/taskvoice";
+            username = "root";
+            password = "";
         }
 
         BasicDataSource ds = new BasicDataSource();

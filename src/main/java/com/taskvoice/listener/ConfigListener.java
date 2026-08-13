@@ -51,7 +51,7 @@ public class ConfigListener implements ServletContextListener {
     }
 
     private void store(Dotenv dotenv, String key) {
-        String value = dotenv.get(key, System.getenv(key));
+        String value = (dotenv != null) ? dotenv.get(key, System.getenv(key)) : System.getenv(key);
         if (value != null && !value.isBlank()) {
             ctx.setAttribute(key, value);
             log.debug("Config key '{}' loaded.", key);
