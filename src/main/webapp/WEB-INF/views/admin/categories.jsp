@@ -41,12 +41,12 @@
                   <td style="font-weight: 600;"><c:out value="${c.name}"/></td>
                   <td style="color: var(--text-secondary);"><c:out value="${c.description}"/></td>
                   <td>
-                    <span class="status-pill ${c.default ? 'status-completed' : 'status-in_progress'}">
-                      <c:out value="${c.default ? 'DEFAULT' : 'CUSTOM'}"/>
+                    <span class="status-pill ${c.isDefault ? 'status-completed' : 'status-in_progress'}">
+                      <c:out value="${c.isDefault ? 'DEFAULT' : 'CUSTOM'}"/>
                     </span>
                   </td>
                   <td>
-                    <c:if test="${!c.default}">
+                    <c:if test="${!c.isDefault}">
                       <form action="${pageContext.request.contextPath}/admin/categories" method="POST" style="display:inline;" onsubmit="return confirm('Delete category?');">
                         <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}"/>
                         <input type="hidden" name="action" value="delete"/>
