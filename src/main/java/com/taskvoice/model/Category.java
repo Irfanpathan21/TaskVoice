@@ -23,6 +23,7 @@ public class Category {
     public void setDescription(String description) { this.description = description; }
 
     public boolean isDefault() { return isDefault; }
+    public boolean getIsDefault() { return isDefault; }
     public void setDefault(boolean aDefault) { isDefault = aDefault; }
 
     public Integer getCreatedBy() { return createdBy; }
