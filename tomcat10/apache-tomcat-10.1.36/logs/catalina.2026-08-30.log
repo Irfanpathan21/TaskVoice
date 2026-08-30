@@ -1,0 +1,45 @@
+30-Aug-2026 15:04:56.903 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log Server version name:   Apache Tomcat/10.1.36
+30-Aug-2026 15:04:56.907 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log Server built:          Feb 13 2025 13:13:30 UTC
+30-Aug-2026 15:04:56.907 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log Server version number: 10.1.36.0
+30-Aug-2026 15:04:56.907 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log OS Name:               Windows 11
+30-Aug-2026 15:04:56.907 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log OS Version:            10.0
+30-Aug-2026 15:04:56.907 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log Architecture:          amd64
+30-Aug-2026 15:04:56.907 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log Java Home:             C:\Program Files\Java\jdk-25
+30-Aug-2026 15:04:56.907 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log JVM Version:           25+37-LTS-3491
+30-Aug-2026 15:04:56.907 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log JVM Vendor:            Oracle Corporation
+30-Aug-2026 15:04:56.908 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log CATALINA_BASE:         C:\Users\ashup\.gemini\antigravity-ide\scratch\taskvoice\tomcat10\apache-tomcat-10.1.36
+30-Aug-2026 15:04:56.908 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log CATALINA_HOME:         C:\Users\ashup\.gemini\antigravity-ide\scratch\taskvoice\tomcat10\apache-tomcat-10.1.36
+30-Aug-2026 15:04:56.930 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log Command line argument: -Djava.util.logging.config.file=C:\Users\ashup\.gemini\antigravity-ide\scratch\taskvoice\tomcat10\apache-tomcat-10.1.36\conf\logging.properties
+30-Aug-2026 15:04:56.931 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log Command line argument: -Djava.util.logging.manager=org.apache.juli.ClassLoaderLogManager
+30-Aug-2026 15:04:56.931 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log Command line argument: -Djdk.tls.ephemeralDHKeySize=2048
+30-Aug-2026 15:04:56.931 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log Command line argument: -Djava.protocol.handler.pkgs=org.apache.catalina.webresources
+30-Aug-2026 15:04:56.931 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log Command line argument: -Dsun.io.useCanonCaches=false
+30-Aug-2026 15:04:56.931 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log Command line argument: --add-opens=java.base/java.lang=ALL-UNNAMED
+30-Aug-2026 15:04:56.931 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log Command line argument: --add-opens=java.base/java.io=ALL-UNNAMED
+30-Aug-2026 15:04:56.931 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log Command line argument: --add-opens=java.base/java.util=ALL-UNNAMED
+30-Aug-2026 15:04:56.931 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log Command line argument: --add-opens=java.base/java.util.concurrent=ALL-UNNAMED
+30-Aug-2026 15:04:56.931 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log Command line argument: --add-opens=java.rmi/sun.rmi.transport=ALL-UNNAMED
+30-Aug-2026 15:04:56.931 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log Command line argument: -Dcatalina.base=C:\Users\ashup\.gemini\antigravity-ide\scratch\taskvoice\tomcat10\apache-tomcat-10.1.36
+30-Aug-2026 15:04:56.932 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log Command line argument: -Dcatalina.home=C:\Users\ashup\.gemini\antigravity-ide\scratch\taskvoice\tomcat10\apache-tomcat-10.1.36
+30-Aug-2026 15:04:56.932 INFO [main] org.apache.catalina.startup.VersionLoggerListener.log Command line argument: -Djava.io.tmpdir=C:\Users\ashup\.gemini\antigravity-ide\scratch\taskvoice\tomcat10\apache-tomcat-10.1.36\temp
+30-Aug-2026 15:04:56.938 INFO [main] org.apache.catalina.core.AprLifecycleListener.lifecycleEvent Loaded Apache Tomcat Native library [2.0.8] using APR version [1.7.4].
+30-Aug-2026 15:04:56.948 INFO [main] org.apache.catalina.core.AprLifecycleListener.initializeSSL OpenSSL successfully initialized [OpenSSL 3.0.14 4 Jun 2024]
+30-Aug-2026 15:04:57.241 INFO [main] org.apache.coyote.AbstractProtocol.init Initializing ProtocolHandler ["http-nio-8080"]
+30-Aug-2026 15:04:57.273 INFO [main] org.apache.catalina.startup.Catalina.load Server initialization in [600] milliseconds
+30-Aug-2026 15:04:57.347 INFO [main] org.apache.catalina.core.StandardService.startInternal Starting service [Catalina]
+30-Aug-2026 15:04:57.347 INFO [main] org.apache.catalina.core.StandardEngine.startInternal Starting Servlet engine: [Apache Tomcat/10.1.36]
+30-Aug-2026 15:04:57.377 INFO [main] org.apache.catalina.startup.HostConfig.deployWAR Deploying web application archive [C:\Users\ashup\.gemini\antigravity-ide\scratch\taskvoice\tomcat10\apache-tomcat-10.1.36\webapps\taskvoice.war]
+30-Aug-2026 15:05:02.549 INFO [main] org.apache.jasper.servlet.TldScanner.scanJars At least one JAR was scanned for TLDs yet contained no TLDs. Enable debug logging for this logger for a complete list of JARs that were scanned but no TLDs were found in them. Skipping unneeded JARs during scanning can improve startup time and JSP compilation time.
+30-Aug-2026 15:05:03.021 INFO [main] org.apache.catalina.startup.HostConfig.deployWAR Deployment of web application archive [C:\Users\ashup\.gemini\antigravity-ide\scratch\taskvoice\tomcat10\apache-tomcat-10.1.36\webapps\taskvoice.war] has finished in [5,641] ms
+30-Aug-2026 15:05:03.022 INFO [main] org.apache.catalina.startup.HostConfig.deployDirectory Deploying web application directory [C:\Users\ashup\.gemini\antigravity-ide\scratch\taskvoice\tomcat10\apache-tomcat-10.1.36\webapps\docs]
+30-Aug-2026 15:05:03.082 INFO [main] org.apache.catalina.startup.HostConfig.deployDirectory Deployment of web application directory [C:\Users\ashup\.gemini\antigravity-ide\scratch\taskvoice\tomcat10\apache-tomcat-10.1.36\webapps\docs] has finished in [60] ms
+30-Aug-2026 15:05:03.083 INFO [main] org.apache.catalina.startup.HostConfig.deployDirectory Deploying web application directory [C:\Users\ashup\.gemini\antigravity-ide\scratch\taskvoice\tomcat10\apache-tomcat-10.1.36\webapps\examples]
+30-Aug-2026 15:05:03.625 INFO [main] org.apache.catalina.startup.HostConfig.deployDirectory Deployment of web application directory [C:\Users\ashup\.gemini\antigravity-ide\scratch\taskvoice\tomcat10\apache-tomcat-10.1.36\webapps\examples] has finished in [542] ms
+30-Aug-2026 15:05:03.625 INFO [main] org.apache.catalina.startup.HostConfig.deployDirectory Deploying web application directory [C:\Users\ashup\.gemini\antigravity-ide\scratch\taskvoice\tomcat10\apache-tomcat-10.1.36\webapps\host-manager]
+30-Aug-2026 15:05:03.685 INFO [main] org.apache.catalina.startup.HostConfig.deployDirectory Deployment of web application directory [C:\Users\ashup\.gemini\antigravity-ide\scratch\taskvoice\tomcat10\apache-tomcat-10.1.36\webapps\host-manager] has finished in [60] ms
+30-Aug-2026 15:05:03.686 INFO [main] org.apache.catalina.startup.HostConfig.deployDirectory Deploying web application directory [C:\Users\ashup\.gemini\antigravity-ide\scratch\taskvoice\tomcat10\apache-tomcat-10.1.36\webapps\manager]
+30-Aug-2026 15:05:03.731 INFO [main] org.apache.catalina.startup.HostConfig.deployDirectory Deployment of web application directory [C:\Users\ashup\.gemini\antigravity-ide\scratch\taskvoice\tomcat10\apache-tomcat-10.1.36\webapps\manager] has finished in [45] ms
+30-Aug-2026 15:05:03.732 INFO [main] org.apache.catalina.startup.HostConfig.deployDirectory Deploying web application directory [C:\Users\ashup\.gemini\antigravity-ide\scratch\taskvoice\tomcat10\apache-tomcat-10.1.36\webapps\ROOT]
+30-Aug-2026 15:05:03.765 INFO [main] org.apache.catalina.startup.HostConfig.deployDirectory Deployment of web application directory [C:\Users\ashup\.gemini\antigravity-ide\scratch\taskvoice\tomcat10\apache-tomcat-10.1.36\webapps\ROOT] has finished in [33] ms
+30-Aug-2026 15:05:03.770 INFO [main] org.apache.coyote.AbstractProtocol.start Starting ProtocolHandler ["http-nio-8080"]
+30-Aug-2026 15:05:03.803 INFO [main] org.apache.catalina.startup.Catalina.start Server startup in [6527] milliseconds
