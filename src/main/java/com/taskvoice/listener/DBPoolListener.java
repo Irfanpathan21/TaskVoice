@@ -37,6 +37,29 @@ public class DBPoolListener implements ServletContextListener {
             password = "";
         }
 
+        // Support mysql:// scheme if provided by cloud hosting platform
+        if (url.startsWith("mysql://")) {
+            url = "jdbc:" + url;
+        }
+
+        // Automatically append SSL & Public Key parameters for cloud databases (e.g. Aiven, AWS RDS, Render)
+        if (url.startsWith("jdbc:mysql://")) {
+            if (!url.contains("trustServerCertificate=")) {
+                url += (url.contains("?") ? "&" : "?") + "trustServerCertificate=true";
+            }
+            if (!url.contains("allowPublicKeyRetrieval=")) {
+                url += "&allowPublicKeyRetrieval=true";
+            }
+            if (!url.contains("useSSL=") && !url.contains("sslMode=")) {
+                url += "&useSSL=true";
+            }
+            if (!url.contains("serverTimezone=")) {
+                url += "&serverTimezone=UTC";
+            }
+        }
+
+        log.info("Connecting to database URL: {}", url.replaceAll("password=[^&]*", "password=***"));
+
         BasicDataSource ds = new BasicDataSource();
         ds.setDriverClassName("com.mysql.cj.jdbc.Driver");
         ds.setUrl(url);
@@ -44,20 +67,20 @@ public class DBPoolListener implements ServletContextListener {
         ds.setPassword(password);
 
         // Optimized Pool configuration for cloud databases
-        ds.setInitialSize(5);
-        ds.setMaxTotal(25);
+        ds.setInitialSize(2);
+        ds.setMaxTotal(20);
         ds.setMaxIdle(10);
-        ds.setMinIdle(5);
-        ds.setMaxWaitMillis(5_000);
+        ds.setMinIdle(2);
+        ds.setMaxWaitMillis(10_000);
         ds.setValidationQuery("SELECT 1");
-        ds.setTestOnBorrow(false);
+        ds.setTestOnBorrow(true);
         ds.setTestWhileIdle(true);
         ds.setTimeBetweenEvictionRunsMillis(30_000);
         ds.setMinEvictableIdleTimeMillis(60_000);
 
         dataSource = ds;
         sce.getServletContext().setAttribute("dataSource", ds);
-        log.info("Database connection pool initialized (maxTotal={}).", ds.getMaxTotal());
+        log.info("Database connection pool initialized successfully.");
     }
 
     @Override

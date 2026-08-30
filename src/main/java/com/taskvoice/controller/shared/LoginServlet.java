@@ -10,12 +10,16 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.util.Optional;
 
 @WebServlet("/login")
 public class LoginServlet extends HttpServlet {
 
+    private static final Logger log = LoggerFactory.getLogger(LoginServlet.class);
     private final AuthenticationService authService = new AuthenticationService();
 
     @Override
@@ -43,19 +47,26 @@ public class LoginServlet extends HttpServlet {
             return;
         }
 
-        Optional<User> result = authService.login(email, password, req.getRemoteAddr());
+        try {
+            Optional<User> result = authService.login(email, password, req.getRemoteAddr());
 
-        if (result.isEmpty()) {
-            req.setAttribute("error", "Invalid email or password.");
+            if (result.isEmpty()) {
+                req.setAttribute("error", "Invalid email or password.");
+                req.setAttribute("email", email);
+                req.getRequestDispatcher("/WEB-INF/views/shared/login.jsp").forward(req, resp);
+                return;
+            }
+
+            User user = result.get();
+            HttpSession session = req.getSession(true);
+            SessionUtil.setUser(session, user);
+            redirectToDashboard(resp, req, user);
+        } catch (Exception e) {
+            log.error("Login process encountered a database/system error", e);
+            req.setAttribute("error", "Database connection error. Please verify database availability.");
             req.setAttribute("email", email);
             req.getRequestDispatcher("/WEB-INF/views/shared/login.jsp").forward(req, resp);
-            return;
         }
-
-        User user = result.get();
-        HttpSession session = req.getSession(true);
-        SessionUtil.setUser(session, user);
-        redirectToDashboard(resp, req, user);
     }
 
     private void redirectToDashboard(HttpServletResponse resp, HttpServletRequest req, User user)
