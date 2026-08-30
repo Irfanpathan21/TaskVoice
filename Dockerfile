@@ -25,4 +25,4 @@ COPY --from=builder /app/target/taskvoice.war webapps/ROOT.war
 # Expose Render PORT (default 8080 or PORT env var)
 EXPOSE 8080
 
-CMD ["catalina.sh", "run"]
+CMD ["sh", "-c", "sed -i \"s/port=\\\"8080\\\"/port=\\\"${PORT:-8080}\\\"/g\" conf/server.xml && bin/catalina.sh run"]

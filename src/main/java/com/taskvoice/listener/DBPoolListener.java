@@ -21,66 +21,70 @@ public class DBPoolListener implements ServletContextListener {
 
     @Override
     public void contextInitialized(ServletContextEvent sce) {
-        String url      = ConfigListener.get("DB_URL");
-        String username = ConfigListener.get("DB_USERNAME");
-        String password = ConfigListener.get("DB_PASSWORD");
+        try {
+            String url      = ConfigListener.get("DB_URL");
+            String username = ConfigListener.get("DB_USERNAME");
+            String password = ConfigListener.get("DB_PASSWORD");
 
-        if (url == null || url.isBlank()) {
-            url = System.getenv("DB_URL");
-            username = System.getenv("DB_USERNAME");
-            password = System.getenv("DB_PASSWORD");
-        }
-
-        if (url == null || url.isBlank()) {
-            url = "jdbc:mysql://localhost:3306/taskvoice";
-            username = "root";
-            password = "";
-        }
-
-        // Support mysql:// scheme if provided by cloud hosting platform
-        if (url.startsWith("mysql://")) {
-            url = "jdbc:" + url;
-        }
-
-        // Automatically append SSL & Public Key parameters for cloud databases (e.g. Aiven, AWS RDS, Render)
-        if (url.startsWith("jdbc:mysql://")) {
-            if (!url.contains("trustServerCertificate=")) {
-                url += (url.contains("?") ? "&" : "?") + "trustServerCertificate=true";
+            if (url == null || url.isBlank()) {
+                url = System.getenv("DB_URL");
+                username = System.getenv("DB_USERNAME");
+                password = System.getenv("DB_PASSWORD");
             }
-            if (!url.contains("allowPublicKeyRetrieval=")) {
-                url += "&allowPublicKeyRetrieval=true";
+
+            if (url == null || url.isBlank()) {
+                url = "jdbc:mysql://localhost:3306/taskvoice?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC";
+                username = "root";
+                password = "";
             }
-            if (!url.contains("useSSL=") && !url.contains("sslMode=")) {
-                url += "&useSSL=true";
+
+            // Support mysql:// scheme if provided by cloud hosting platform
+            if (url.startsWith("mysql://")) {
+                url = "jdbc:" + url;
             }
-            if (!url.contains("serverTimezone=")) {
-                url += "&serverTimezone=UTC";
+
+            // Automatically append SSL & Public Key parameters for cloud databases (e.g. Aiven, AWS RDS, Render)
+            if (url.startsWith("jdbc:mysql://")) {
+                if (!url.contains("trustServerCertificate=")) {
+                    url += (url.contains("?") ? "&" : "?") + "trustServerCertificate=true";
+                }
+                if (!url.contains("allowPublicKeyRetrieval=")) {
+                    url += "&allowPublicKeyRetrieval=true";
+                }
+                if (!url.contains("useSSL=") && !url.contains("sslMode=")) {
+                    url += "&useSSL=true";
+                }
+                if (!url.contains("serverTimezone=")) {
+                    url += "&serverTimezone=UTC";
+                }
             }
+
+            log.info("Connecting to database URL: {}", url.replaceAll("password=[^&]*", "password=***"));
+
+            BasicDataSource ds = new BasicDataSource();
+            ds.setDriverClassName("com.mysql.cj.jdbc.Driver");
+            ds.setUrl(url);
+            ds.setUsername(username);
+            ds.setPassword(password);
+
+            // Lazy Pool configuration for cloud databases — won't block Tomcat startup
+            ds.setInitialSize(0);
+            ds.setMaxTotal(20);
+            ds.setMaxIdle(10);
+            ds.setMinIdle(0);
+            ds.setMaxWaitMillis(10_000);
+            ds.setValidationQuery("SELECT 1");
+            ds.setTestOnBorrow(true);
+            ds.setTestWhileIdle(true);
+            ds.setTimeBetweenEvictionRunsMillis(30_000);
+            ds.setMinEvictableIdleTimeMillis(60_000);
+
+            dataSource = ds;
+            sce.getServletContext().setAttribute("dataSource", ds);
+            log.info("Database connection pool initialized successfully.");
+        } catch (Exception e) {
+            log.error("Failed to initialize database connection pool during startup", e);
         }
-
-        log.info("Connecting to database URL: {}", url.replaceAll("password=[^&]*", "password=***"));
-
-        BasicDataSource ds = new BasicDataSource();
-        ds.setDriverClassName("com.mysql.cj.jdbc.Driver");
-        ds.setUrl(url);
-        ds.setUsername(username);
-        ds.setPassword(password);
-
-        // Optimized Pool configuration for cloud databases
-        ds.setInitialSize(2);
-        ds.setMaxTotal(20);
-        ds.setMaxIdle(10);
-        ds.setMinIdle(2);
-        ds.setMaxWaitMillis(10_000);
-        ds.setValidationQuery("SELECT 1");
-        ds.setTestOnBorrow(true);
-        ds.setTestWhileIdle(true);
-        ds.setTimeBetweenEvictionRunsMillis(30_000);
-        ds.setMinEvictableIdleTimeMillis(60_000);
-
-        dataSource = ds;
-        sce.getServletContext().setAttribute("dataSource", ds);
-        log.info("Database connection pool initialized successfully.");
     }
 
     @Override
