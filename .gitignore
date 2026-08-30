@@ -7,3 +7,7 @@ target/
 *.iml
 scratch/
 *.env
+tomcat10/
+*.zip
+*.pdf
+*.md
