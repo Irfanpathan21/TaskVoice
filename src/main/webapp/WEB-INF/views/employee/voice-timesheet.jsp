@@ -33,14 +33,16 @@
           </div>
 
           <div id="statusText" style="font-weight: 500; font-size: 14px; color: var(--text-primary);">
-            Press the mic button and speak about your daily activities.
+            Press the mic button and speak about your daily activities, or type your recap manually below.
           </div>
 
           <div id="stageLabel" class="stage-label"></div>
 
           <!-- Live Transcript Box -->
-          <div id="transcriptBox" class="live-transcript-box">
-            <span style="color: var(--text-muted);">Transcribed speech will appear here live...</span>
+          <div id="transcriptBox" class="live-transcript-box" contenteditable="true" style="min-height: 80px; outline: none; border: 1px solid var(--border); padding: 12px; border-radius: var(--radius-md); background: rgba(0,0,0,0.1); margin-top: 12px;" placeholder="Type your recap here if you don't have a microphone..."></div>
+          
+          <div style="margin-top: 12px; text-align: right;">
+            <button id="processTextBtn" class="btn btn-secondary">Process Typed Text</button>
           </div>
         </div>
 

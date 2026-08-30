@@ -53,6 +53,13 @@ class VoiceRecorder {
     if (this.micBtn) {
       this.micBtn.addEventListener('click', () => this.toggleRecording());
     }
+    const processBtn = document.getElementById('processTextBtn');
+    if (processBtn) {
+      processBtn.addEventListener('click', () => {
+        this.statusText.textContent = 'Processing typed text with Gemini AI...';
+        this.sendToBackend();
+      });
+    }
   }
 
   toggleRecording() {
@@ -66,12 +73,22 @@ class VoiceRecorder {
   start() {
     this.isRecording = true;
     this.finalTranscript = '';
-    this.transcriptBox.textContent = 'Listening... Speak naturally about your day.';
+    
+    // Clear out placeholder text if it's there
+    const currentText = this.transcriptBox.textContent || '';
+    if (currentText.includes('appear here') || currentText.startsWith('Listening...')) {
+        this.transcriptBox.textContent = '';
+    }
+
     this.micBtn.classList.add('recording');
-    this.statusText.textContent = 'Recording in progress... Click mic to stop.';
+    this.statusText.textContent = 'Recording in progress... Speak now. (Or click mic again to stop)';
 
     if (this.recognition) {
-      this.recognition.start();
+      try {
+        this.recognition.start();
+      } catch (e) {
+        console.warn('Speech API already started', e);
+      }
     }
   }
 
@@ -81,16 +98,21 @@ class VoiceRecorder {
     this.statusText.textContent = 'Processing recording with Gemini AI...';
 
     if (this.recognition) {
-      this.recognition.stop();
+      try {
+        this.recognition.stop();
+      } catch (e) {
+        // ignore
+      }
     }
 
     setTimeout(() => this.sendToBackend(), 500);
   }
 
   async sendToBackend() {
-    const text = this.finalTranscript || this.transcriptBox.textContent;
-    if (!text || text.trim() === '' || text.startsWith('Listening...')) {
-      this.statusText.textContent = 'No speech detected. Please try again.';
+    // If the browser SpeechAPI got text, use that, otherwise use whatever the user typed in the contenteditable div
+    let text = (this.finalTranscript + ' ' + (this.transcriptBox.textContent || '')).trim();
+    if (!text || text === '' || text.startsWith('Listening...')) {
+      this.statusText.textContent = 'No speech or text detected. Please type manually or try again.';
       return;
     }
 
