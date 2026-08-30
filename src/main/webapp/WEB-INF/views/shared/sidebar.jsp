@@ -87,7 +87,7 @@
   </ul>
 
   <div class="user-profile-widget">
-    <div class="avatar">${sessionScope.currentUser.name.substring(0,1)}</div>
+    <div class="avatar"><c:out value="${sessionScope.currentUser.avatarLetter}"/></div>
     <div style="flex:1; overflow:hidden;">
       <div style="font-weight: 600; font-size: 13px; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">
         <c:out value="${sessionScope.currentUser.name}"/>

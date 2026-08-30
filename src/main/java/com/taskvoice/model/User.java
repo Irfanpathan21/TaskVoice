@@ -78,4 +78,11 @@ public class User {
     public boolean isManager()  { return "MANAGER".equals(roleName); }
     public boolean isEmployee() { return "EMPLOYEE".equals(roleName); }
     public boolean isActive()   { return "ACTIVE".equals(status); }
+
+    public String getAvatarLetter() {
+        if (name != null && !name.isBlank()) {
+            return name.trim().substring(0, 1).toUpperCase();
+        }
+        return "U";
+    }
 }
