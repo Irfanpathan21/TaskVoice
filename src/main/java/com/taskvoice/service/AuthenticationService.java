@@ -38,7 +38,11 @@ public class AuthenticationService {
             return Optional.empty();
         }
 
-        if (!PasswordUtil.verify(plainPassword, user.getPasswordHash())) {
+        System.out.println("DEBUG: Comparing plainPassword: '" + plainPassword + "' with hash: '" + user.getPasswordHash() + "'");
+        boolean matches = PasswordUtil.verify(plainPassword, user.getPasswordHash());
+        System.out.println("DEBUG: Match result: " + matches);
+
+        if (!matches) {
             log.warn("Failed password check for: {}", email);
             return Optional.empty();
         }

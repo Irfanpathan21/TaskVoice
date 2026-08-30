@@ -29,7 +29,7 @@ import java.util.UUID;
 public class GeminiClient {
 
     private static final Logger log = LoggerFactory.getLogger(GeminiClient.class);
-    private static final String API_BASE = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+    private static final String API_BASE = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent";
     private static final int MAX_RETRIES = 2;
     private static final int TIMEOUT_SECONDS = 30;
 
