@@ -28,10 +28,32 @@ public class VoiceService {
 
     private static final Logger log = LoggerFactory.getLogger(VoiceService.class);
 
-    private final VoiceRecordDAO  voiceRecordDAO = new VoiceRecordDAOImpl();
-    private final TimesheetDAO    timesheetDAO   = new TimesheetDAOImpl();
-    private final TaskDAO         taskDAO        = new TaskDAOImpl();
-    private final GeminiClient    gemini         = new GeminiClient();
+    private final VoiceRecordDAO   voiceRecordDAO = new VoiceRecordDAOImpl();
+    private final TimesheetDAO     timesheetDAO   = new TimesheetDAOImpl();
+    private final TaskDAO          taskDAO        = new TaskDAOImpl();
+    private final GeminiClient     gemini         = new GeminiClient();
+    private final GroqWhisperClient whisperClient = new GroqWhisperClient();
+
+    /**
+     * Process audio bytes using Groq Whisper API (whisper-large-v3-turbo), with text fallback.
+     */
+    public ParseResult processAudioData(int userId, byte[] audioBytes, String mimeType, String fallbackTranscript) {
+        String correlationId = UUID.randomUUID().toString().substring(0, 8);
+        String finalTranscript = fallbackTranscript;
+
+        if (audioBytes != null && audioBytes.length > 0) {
+            try {
+                String whisperText = whisperClient.transcribe(audioBytes, mimeType, correlationId);
+                if (whisperText != null && !whisperText.isBlank()) {
+                    finalTranscript = whisperText.trim();
+                }
+            } catch (Exception e) {
+                log.warn("[{}] Groq Whisper transcription failed: {}. Falling back to browser transcript.", correlationId, e.getMessage());
+            }
+        }
+
+        return processTranscript(userId, finalTranscript, null);
+    }
 
     /**
      * Step 1+2+3: Save transcript, call Gemini, return parsed work blocks.

@@ -48,15 +48,26 @@ public class VoiceTimesheetServlet extends HttpServlet {
         resp.setContentType("application/json");
 
         if ("process".equals(action)) {
-            String transcript = req.getParameter("transcript");
-            String audioRef   = req.getParameter("audioFileRef");
+            String transcript  = req.getParameter("transcript");
+            String audioBase64 = req.getParameter("audioBase64");
+            String mimeType    = req.getParameter("mimeType");
 
-            if (transcript == null || transcript.isBlank()) {
-                resp.getWriter().write(JsonUtil.error("Transcript cannot be empty."));
+            byte[] audioBytes = null;
+            if (audioBase64 != null && !audioBase64.isBlank()) {
+                try {
+                    String cleanBase64 = audioBase64.contains(",") ? audioBase64.split(",")[1] : audioBase64;
+                    audioBytes = java.util.Base64.getDecoder().decode(cleanBase64.trim());
+                } catch (Exception e) {
+                    // Fall back to text transcript
+                }
+            }
+
+            if ((transcript == null || transcript.isBlank()) && (audioBytes == null || audioBytes.length == 0)) {
+                resp.getWriter().write(JsonUtil.error("Please record speech or enter a text recap."));
                 return;
             }
 
-            ParseResult result = voiceService.processTranscript(employee.getId(), transcript, audioRef);
+            ParseResult result = voiceService.processAudioData(employee.getId(), audioBytes, mimeType, transcript);
             resp.getWriter().write(JsonUtil.toJson(result));
 
         } else if ("retry".equals(action)) {

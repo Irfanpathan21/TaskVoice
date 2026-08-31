@@ -29,7 +29,11 @@ import java.util.UUID;
 public class GeminiClient {
 
     private static final Logger log = LoggerFactory.getLogger(GeminiClient.class);
-    private static final String API_BASE = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent";
+    private static final String[] MODELS = {
+        "gemini-1.5-flash",
+        "gemini-2.0-flash-exp",
+        "gemini-1.5-pro-latest"
+    };
     private static final int MAX_RETRIES = 2;
     private static final int TIMEOUT_SECONDS = 30;
 
@@ -59,52 +63,44 @@ public class GeminiClient {
         }
 
         String requestBody = buildRequestBody(prompt);
-        String url = API_BASE + "?key=" + apiKey;
-
         GeminiException lastException = null;
 
-        for (int attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-            if (attempt > 0) {
-                long waitMs = (long) Math.pow(2, attempt) * 1000L;
-                log.info("[{}] Gemini retry attempt {} after {}ms", correlationId, attempt, waitMs);
+        for (String modelName : MODELS) {
+            String url = "https://generativelanguage.googleapis.com/v1beta/models/" + modelName + ":generateContent?key=" + apiKey;
+            log.info("[{}] Attempting Gemini text processing using model '{}'", correlationId, modelName);
+
+            for (int attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+                if (attempt > 0) {
+                    long waitMs = (long) Math.pow(2, attempt) * 800L;
+                    log.info("[{}] Gemini retry attempt {} for model {} after {}ms", correlationId, attempt, modelName, waitMs);
+                    try { Thread.sleep(waitMs); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+                }
+
                 try {
-                    Thread.sleep(waitMs);
-                } catch (InterruptedException ie) {
-                    Thread.currentThread().interrupt();
+                    HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create(url))
+                        .header("Content-Type", "application/json")
+                        .timeout(Duration.ofSeconds(TIMEOUT_SECONDS))
+                        .POST(HttpRequest.BodyPublishers.ofString(requestBody))
+                        .build();
+
+                    HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                    int status = response.statusCode();
+
+                    if (status == 200) {
+                        return extractText(response.body(), correlationId);
+                    } else if (status == 429 || status == 500 || status == 503) {
+                        lastException = new GeminiException("Transient error from Gemini API: HTTP " + status);
+                        log.warn("[{}] Transient error HTTP {} for model {} — will retry", correlationId, status, modelName);
+                    } else {
+                        log.warn("[{}] Model {} returned HTTP {} — trying next fallback model if available. Body: {}", correlationId, status, modelName, response.body());
+                        lastException = new GeminiException("Gemini model error: HTTP " + status);
+                        break; // try next model
+                    }
+                } catch (IOException | InterruptedException e) {
+                    if (e instanceof InterruptedException) Thread.currentThread().interrupt();
+                    lastException = new GeminiException("Network error calling Gemini: " + e.getMessage(), e);
                 }
-            }
-
-            try {
-                HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(url))
-                    .header("Content-Type", "application/json")
-                    .timeout(Duration.ofSeconds(TIMEOUT_SECONDS))
-                    .POST(HttpRequest.BodyPublishers.ofString(requestBody))
-                    .build();
-
-                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-                int status = response.statusCode();
-
-                log.info("[{}] Gemini response status: {}", correlationId, status);
-
-                if (status == 200) {
-                    return extractText(response.body(), correlationId);
-                } else if (status == 429 || status == 500 || status == 503) {
-                    // Transient — retry
-                    lastException = new GeminiException("Transient error from Gemini API: HTTP " + status);
-                    log.warn("[{}] Transient error HTTP {} — will retry", correlationId, status);
-                } else {
-                    // Non-retryable (400/401/403/other)
-                    log.error("[{}] Non-retryable Gemini error: HTTP {} — Response Body: {}", correlationId, status, response.body());
-                    throw new GeminiException("Gemini API error: HTTP " + status + " - " + response.body());
-                }
-
-            } catch (IOException | InterruptedException e) {
-                if (e instanceof InterruptedException) Thread.currentThread().interrupt();
-                lastException = new GeminiException("Network error calling Gemini: " + e.getMessage(), e);
-                log.warn("[{}] Network error on attempt {}: {}", correlationId, attempt, e.getMessage());
-            } catch (GeminiException e) {
-                throw e; // Non-retryable, rethrow immediately
             }
         }
 
