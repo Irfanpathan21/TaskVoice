@@ -16,16 +16,18 @@
       <jsp:include page="/WEB-INF/views/shared/header.jsp"/>
 
       <div style="padding: var(--space-xl); max-width: 960px; margin: 0 auto;">
-        
-        <!-- Voice & Manual Logger Hero Surface -->
+
+        <%-- ═══════ Voice & Manual Logger Hero ═══════ --%>
         <div class="voice-hero">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
             <div>
               <h1 style="font-size: 24px; font-weight: 700; margin-bottom: 8px;">Voice & Manual Timesheet Logger</h1>
-              <p style="color: var(--text-secondary); font-size: 14px;">Speak naturally about your day or type your recap. AI will extract and pre-fill your task form automatically.</p>
+              <p style="color: var(--text-secondary); font-size: 14px;">
+                Speak naturally about your day or type your recap. AI will extract and pre-fill your task form automatically.
+              </p>
             </div>
-            <button type="button" class="btn btn-secondary" onclick="addBlankManualBlock()" style="display:flex; align-items:center; gap:6px;">
-              <span>➕</span> Add Manual Timesheet Entry
+            <button type="button" class="btn btn-secondary" id="addManualTopBtn" style="display:flex; align-items:center; gap:6px;">
+              <span>&#10133;</span> Add Manual Timesheet Entry
             </button>
           </div>
 
@@ -43,18 +45,20 @@
             Press the mic button to record your daily work recap, or type your update below.
           </div>
 
-          <div id="stageLabel" class="stage-label" style="text-align: center; margin-top: 6px; font-size: 13px; color: var(--accent-blue);"></div>
+          <div id="stageLabel" class="stage-label" style="text-align: center; margin-top: 6px;"></div>
 
-          <!-- Live Transcript & Manual Typed Input Box -->
-          <div id="transcriptBox" class="live-transcript-box" contenteditable="true" style="min-height: 80px; outline: none; border: 1px solid var(--border); padding: 12px; border-radius: var(--radius-md); background: rgba(0,0,0,0.1); margin-top: 16px;" placeholder="Type your work recap here if you don't have a microphone..."></div>
-          
+          <%-- Live Transcript & Manual Typed Input Box --%>
+          <div id="transcriptBox" class="live-transcript-box" contenteditable="true"
+               style="min-height: 80px; outline: none; border: 1px solid var(--border); padding: 12px; border-radius: var(--radius-md); background: rgba(0,0,0,0.1); margin-top: 16px;">
+          </div>
+
           <div style="margin-top: 12px; display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-size: 12px; color: var(--text-muted);">💡 Tip: You can edit or add task fields manually before saving.</span>
+            <span style="font-size: 12px; color: var(--text-muted);">&#128161; Tip: You can edit or add task fields manually before saving.</span>
             <button id="processTextBtn" class="btn btn-secondary">Process Typed Text</button>
           </div>
         </div>
 
-        <!-- Generated & Manual Work Blocks Form Section -->
+        <%-- ═══════ Editable Work Block Form Section ═══════ --%>
         <div id="reviewContainer" style="display: none; margin-top: 28px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
             <div>
@@ -62,12 +66,10 @@
               <span id="totalHoursBadge" style="font-size: 13px; color: var(--accent-emerald); font-weight: 600;">Total Logged: 0.0 Hours</span>
             </div>
             <div style="display:flex; gap:10px;">
-              <button type="button" class="btn btn-secondary" onclick="addBlankManualBlock()">➕ Add Another Entry</button>
+              <button type="button" class="btn btn-secondary" id="addManualBottomBtn">&#10133; Add Another Entry</button>
               <button id="confirmSaveBtn" class="btn btn-primary">Confirm & Save All Entries</button>
             </div>
           </div>
-
-          <!-- Form Grid for Work Cards -->
           <div id="workBlocksGrid" class="work-blocks-grid"></div>
         </div>
 
@@ -75,173 +77,189 @@
     </div>
   </div>
 
-  <script src="${pageContext.request.contextPath}/js/voice-recorder.js?v=12"></script>
+  <script src="${pageContext.request.contextPath}/js/voice-recorder.js?v=20"></script>
   <script>
-    window.onerror = function(msg, url, lineNo, columnNo, error) {
-      console.error('JS Error:', msg, 'at line', lineNo);
-      const el = document.getElementById('statusText');
-      if (el) el.textContent = '⚠️ JS Error: ' + msg + ' (line ' + lineNo + ')';
-      return false;
-    };
+  // ═══════════════════════════════════════════════════════════
+  //  VOICE TIMESHEET CONTROLLER — NO JSP EL INSIDE JS STRINGS
+  // ═══════════════════════════════════════════════════════════
+  (function() {
+    'use strict';
 
-    let currentRecordId = null;
-    let generatedBlocks = [];
+    // ── Utility: HTML-escape (pure JS, no EL conflict) ──
+    function esc(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
 
-    // Pre-loaded DB Category & Task lists for select dropdowns
-    const availableCategories = [
-      <c:forEach items="${categories}" var="c" varStatus="st">
-        { id: <c:out value="${c.id}"/>, name: "<c:out value="${c.name}"/>" }<c:if test="${!st.last}">,</c:if>
+    // ── Pre-loaded DB data (injected by JSP c:forEach) ──
+    var availableCategories = [
+      <c:forEach items="${categories}" var="cat" varStatus="st">
+        { id: <c:out value="${cat.id}"/>, name: "<c:out value="${cat.name}"/>" }<c:if test="${!st.last}">,</c:if>
+      </c:forEach>
+    ];
+    if (availableCategories.length === 0) {
+      availableCategories = [
+        { id: 1, name: 'Development' }, { id: 2, name: 'Design' },
+        { id: 3, name: 'Meetings' }, { id: 4, name: 'Testing' },
+        { id: 5, name: 'Other' }
+      ];
+    }
+
+    var availableTasks = [
+      <c:forEach items="${assignedTasks}" var="task" varStatus="st">
+        { id: <c:out value="${task.id}"/>, title: "<c:out value="${task.title}"/>" }<c:if test="${!st.last}">,</c:if>
       </c:forEach>
     ];
 
-    const availableTasks = [
-      <c:forEach items="${assignedTasks}" var="t" varStatus="st">
-        { id: <c:out value="${t.id}"/>, title: "<c:out value="${t.title}"/>" }<c:if test="${!st.last}">,</c:if>
-      </c:forEach>
-    ];
+    var csrfToken = '<c:out value="${sessionScope.csrfToken}"/>';
+    var contextPath = '<c:out value="${pageContext.request.contextPath}"/>';
 
-    const recorder = new VoiceRecorder({
+    var currentRecordId = null;
+
+    // ── Voice Recorder Init ──
+    var recorder = new VoiceRecorder({
       micBtnId: 'micBtn',
       statusTextId: 'statusText',
       transcriptBoxId: 'transcriptBox',
       stageLabelId: 'stageLabel',
-      csrfToken: '${sessionScope.csrfToken}',
-      onBlocksReceived: (recordId, blocks, fullTranscript) => {
+      csrfToken: csrfToken,
+      onBlocksReceived: function(recordId, blocks, fullTranscript) {
         currentRecordId = recordId;
-        generatedBlocks = blocks || [];
-        renderWorkBlocks(generatedBlocks, fullTranscript);
+        renderWorkBlocks(blocks || [], fullTranscript || '');
       }
     });
 
+    // ── Render AI-generated work blocks into editable form cards ──
     function renderWorkBlocks(blocks, fullTranscript) {
-      const container = document.getElementById('reviewContainer');
-      const grid = document.getElementById('workBlocksGrid');
+      var container = document.getElementById('reviewContainer');
+      var grid = document.getElementById('workBlocksGrid');
       grid.innerHTML = '';
       container.style.display = 'block';
 
-      let totalHours = 0.0;
-
-      blocks.forEach((b, index) => {
-        const hrs = parseFloat(b.durationHours) || 0.0;
+      var totalHours = 0;
+      for (var i = 0; i < blocks.length; i++) {
+        var hrs = parseFloat(blocks[i].durationHours) || 0;
         totalHours += hrs;
-
-        const card = createWorkBlockCard(b, index, fullTranscript);
-        grid.appendChild(card);
-      });
-
-      updateTotalHoursDisplay(totalHours);
+        grid.appendChild(createCard(blocks[i], fullTranscript));
+      }
+      updateTotalHours();
     }
 
-    function createWorkBlockCard(b, index, fullTranscript) {
-      const card = document.createElement('div');
+    // ── Create a single editable form card ──
+    function createCard(block, transcript) {
+      var card = document.createElement('div');
       card.className = 'work-block-card';
-      card.dataset.index = index;
 
-      // Category options dropdown
-      let catOptionsHtml = '<option value="">-- Select Category --</option>';
-      const catList = availableCategories.length > 0 ? availableCategories : [
-        {id: 1, name: 'Development'}, {id: 2, name: 'Design'}, {id: 3, name: 'Meetings'}, {id: 4, name: 'Testing'}
-      ];
-      catList.forEach(c => {
-        const selected = (b.categoryId && parseInt(b.categoryId) === parseInt(c.id)) ||
-                         (b.category && b.category.toLowerCase() === c.name.toLowerCase()) ? 'selected' : '';
-        catOptionsHtml += `<option value="${c.id}" ${selected}>${escapeHtml(c.name)}</option>`;
-      });
+      // Build category <select> options
+      var catOpts = '<option value="">-- Select Category --</option>';
+      for (var i = 0; i < availableCategories.length; i++) {
+        var c = availableCategories[i];
+        var sel = '';
+        if (block.categoryId && parseInt(block.categoryId) === c.id) sel = ' selected';
+        else if (block.category && block.category.toLowerCase() === c.name.toLowerCase()) sel = ' selected';
+        catOpts += '<option value="' + c.id + '"' + sel + '>' + esc(c.name) + '</option>';
+      }
 
-      // Linked Task options dropdown
-      let taskOptionsHtml = '<option value="">-- No Linked Task --</option>';
-      availableTasks.forEach(t => {
-        const selected = (b.matchedTaskId && parseInt(b.matchedTaskId) === parseInt(t.id)) ||
-                         (b.matchedTaskTitle && b.matchedTaskTitle.toLowerCase() === t.title.toLowerCase()) ? 'selected' : '';
-        taskOptionsHtml += `<option value="${t.id}" ${selected}>${escapeHtml(t.title)}</option>`;
-      });
+      // Build task <select> options
+      var taskOpts = '<option value="">-- No Linked Task --</option>';
+      for (var j = 0; j < availableTasks.length; j++) {
+        var t = availableTasks[j];
+        var tsel = '';
+        if (block.matchedTaskId && parseInt(block.matchedTaskId) === t.id) tsel = ' selected';
+        taskOpts += '<option value="' + t.id + '"' + tsel + '>' + esc(t.title) + '</option>';
+      }
 
-      const spokenPhraseTag = fullTranscript ? `<span class="original-phrase-tag">Original Input: "${escapeHtml(fullTranscript)}"</span>` : '';
+      var transcriptTag = '';
+      if (transcript) {
+        transcriptTag = '<span class="original-phrase-tag">Original: "' + esc(transcript) + '"</span>';
+      }
 
-      card.innerHTML = `
-        ${spokenPhraseTag}
-        <div style="margin-bottom: 12px;">
-          <label style="display:block; font-size:11px; color:var(--text-secondary); margin-bottom:4px; font-weight:600;">TASK / ACTIVITY TITLE</label>
-          <input type="text" class="form-control block-title" value="${escapeHtml(b.title || '')}" placeholder="e.g. Implemented User Auth Servlet"/>
-        </div>
-        <div style="display:flex; gap:12px; margin-bottom:12px; flex-wrap:wrap;">
-          <div style="flex:1; min-width: 140px;">
-            <label style="display:block; font-size:11px; color:var(--text-secondary); margin-bottom:4px; font-weight:600;">WORK CATEGORY</label>
-            <select class="form-control block-category-id">${catOptionsHtml}</select>
-          </div>
-          <div style="flex:1; min-width: 160px;">
-            <label style="display:block; font-size:11px; color:var(--text-secondary); margin-bottom:4px; font-weight:600;">LINKED ASSIGNED TASK</label>
-            <select class="form-control block-task-id">${taskOptionsHtml}</select>
-          </div>
-          <div style="width:110px;">
-            <label style="display:block; font-size:11px; color:var(--text-secondary); margin-bottom:4px; font-weight:600;">HOURS LOGGED</label>
-            <input type="number" step="0.5" min="0.25" max="24" class="form-control block-duration" value="${b.durationHours || 1.0}" onchange="recalculateTotalHours()"/>
-          </div>
-        </div>
-        <div style="margin-bottom: 12px;">
-          <label style="display:block; font-size:11px; color:var(--text-secondary); margin-bottom:4px; font-weight:600;">WORK DESCRIPTION / NOTES</label>
-          <textarea class="form-control block-desc" rows="2" placeholder="Summary of work performed">${escapeHtml(b.description || '')}</textarea>
-        </div>
-        <div style="text-align: right;">
-          <button type="button" class="btn btn-secondary" onclick="removeWorkBlock(this)" style="font-size:11px; color:var(--accent-rose);">Remove Entry</button>
-        </div>
-      `;
+      card.innerHTML = transcriptTag +
+        '<div style="margin-bottom:12px;">' +
+          '<label style="display:block;font-size:11px;color:var(--text-secondary);margin-bottom:4px;font-weight:600;">TASK / ACTIVITY TITLE</label>' +
+          '<input type="text" class="form-control block-title" value="' + esc(block.title || '') + '" placeholder="e.g. Implemented User Auth Servlet"/>' +
+        '</div>' +
+        '<div style="display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap;">' +
+          '<div style="flex:1;min-width:140px;">' +
+            '<label style="display:block;font-size:11px;color:var(--text-secondary);margin-bottom:4px;font-weight:600;">WORK CATEGORY</label>' +
+            '<select class="form-control block-category-id">' + catOpts + '</select>' +
+          '</div>' +
+          '<div style="flex:1;min-width:160px;">' +
+            '<label style="display:block;font-size:11px;color:var(--text-secondary);margin-bottom:4px;font-weight:600;">LINKED ASSIGNED TASK</label>' +
+            '<select class="form-control block-task-id">' + taskOpts + '</select>' +
+          '</div>' +
+          '<div style="width:110px;">' +
+            '<label style="display:block;font-size:11px;color:var(--text-secondary);margin-bottom:4px;font-weight:600;">HOURS LOGGED</label>' +
+            '<input type="number" step="0.5" min="0.25" max="24" class="form-control block-duration" value="' + (block.durationHours || 1.0) + '"/>' +
+          '</div>' +
+        '</div>' +
+        '<div style="margin-bottom:12px;">' +
+          '<label style="display:block;font-size:11px;color:var(--text-secondary);margin-bottom:4px;font-weight:600;">WORK DESCRIPTION / NOTES</label>' +
+          '<textarea class="form-control block-desc" rows="2" placeholder="Summary of work performed">' + esc(block.description || '') + '</textarea>' +
+        '</div>' +
+        '<div style="text-align:right;">' +
+          '<button type="button" class="btn btn-secondary remove-entry-btn" style="font-size:11px;color:var(--accent-rose);">Remove Entry</button>' +
+        '</div>';
+
+      // Wire duration change listener
+      var durInput = card.querySelector('.block-duration');
+      if (durInput) durInput.addEventListener('change', updateTotalHours);
+
+      // Wire remove button
+      var removeBtn = card.querySelector('.remove-entry-btn');
+      if (removeBtn) {
+        removeBtn.addEventListener('click', function() {
+          card.remove();
+          updateTotalHours();
+        });
+      }
 
       return card;
     }
 
+    // ── Add blank manual entry ──
     function addBlankManualBlock() {
-      const container = document.getElementById('reviewContainer');
-      const grid = document.getElementById('workBlocksGrid');
+      var container = document.getElementById('reviewContainer');
+      var grid = document.getElementById('workBlocksGrid');
       container.style.display = 'block';
 
-      const newBlock = {
-        title: '',
-        category: 'Development',
-        durationHours: 1.0,
-        description: ''
-      };
-
-      const card = createWorkBlockCard(newBlock, generatedBlocks.length, '');
+      var blank = { title: '', category: '', durationHours: 1.0, description: '' };
+      var card = createCard(blank, '');
       grid.appendChild(card);
-      recalculateTotalHours();
-
+      updateTotalHours();
       card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
-    function removeWorkBlock(button) {
-      const card = button.closest('.work-block-card');
-      if (card) {
-        card.remove();
-        recalculateTotalHours();
+    // ── Recalculate & display total hours ──
+    function updateTotalHours() {
+      var total = 0;
+      var inputs = document.querySelectorAll('.block-duration');
+      for (var i = 0; i < inputs.length; i++) {
+        total += parseFloat(inputs[i].value) || 0;
       }
+      var badge = document.getElementById('totalHoursBadge');
+      if (badge) badge.textContent = 'Total Logged: ' + total.toFixed(1) + ' Hours';
     }
 
-    function recalculateTotalHours() {
-      let total = 0.0;
-      document.querySelectorAll('.block-duration').forEach(input => {
-        total += parseFloat(input.value) || 0.0;
-      });
-      updateTotalHoursDisplay(total);
-    }
-
-    function updateTotalHoursDisplay(total) {
-      const badge = document.getElementById('totalHoursBadge');
-      if (badge) badge.textContent = `Total Logged: ${total.toFixed(1)} Hours`;
-    }
-
-    document.getElementById('confirmSaveBtn').addEventListener('click', async () => {
-      const cards = document.querySelectorAll('.work-block-card');
+    // ── Confirm & Save All Entries ──
+    document.getElementById('confirmSaveBtn').addEventListener('click', function() {
+      var cards = document.querySelectorAll('.work-block-card');
       if (cards.length === 0) {
         alert('Please add at least one timesheet entry before saving.');
         return;
       }
 
-      const finalBlocks = [];
-      cards.forEach(card => {
-        const catSelect = card.querySelector('.block-category-id');
-        const taskSelect = card.querySelector('.block-task-id');
-        
+      var finalBlocks = [];
+      for (var i = 0; i < cards.length; i++) {
+        var card = cards[i];
+        var catSelect = card.querySelector('.block-category-id');
+        var taskSelect = card.querySelector('.block-task-id');
+
         finalBlocks.push({
           title: card.querySelector('.block-title').value || 'Work Entry',
           categoryId: catSelect.value ? parseInt(catSelect.value) : null,
@@ -250,29 +268,37 @@
           durationHours: parseFloat(card.querySelector('.block-duration').value) || 1.0,
           description: card.querySelector('.block-desc').value || ''
         });
-      });
+      }
 
-      const formData = new URLSearchParams();
+      var formData = new URLSearchParams();
       formData.append('action', 'confirm');
       formData.append('recordId', currentRecordId || '0');
       formData.append('blocksJson', JSON.stringify(finalBlocks));
-      formData.append('_csrf', '${sessionScope.csrfToken}');
+      formData.append('_csrf', csrfToken);
 
-      const resp = await fetch('voice-timesheet', {
+      fetch('voice-timesheet', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: formData
+      })
+      .then(function(resp) { return resp.json(); })
+      .then(function(data) {
+        if (data.status === 'ok') {
+          window.location.href = contextPath + '/employee/calendar';
+        } else {
+          alert('Save failed: ' + (data.errorMessage || 'Unknown error'));
+        }
+      })
+      .catch(function(err) {
+        alert('Network error: ' + err.message);
       });
-
-      const data = await resp.json();
-      if (data.status === 'ok') {
-        window.location.href = '${pageContext.request.contextPath}/employee/calendar';
-      }
     });
 
-    function escapeHtml(str) {
-      return str ? String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;") : '';
-    }
+    // ── Wire Manual Entry buttons ──
+    document.getElementById('addManualTopBtn').addEventListener('click', addBlankManualBlock);
+    document.getElementById('addManualBottomBtn').addEventListener('click', addBlankManualBlock);
+
+  })();
   </script>
 </body>
 </html>
