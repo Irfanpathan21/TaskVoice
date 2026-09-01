@@ -11,17 +11,25 @@ import com.taskvoice.service.VoiceService.WorkBlock;
 import com.taskvoice.util.JsonUtil;
 import com.taskvoice.util.SessionUtil;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.MultipartConfig;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.Part;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
 @WebServlet("/employee/voice-timesheet")
+@MultipartConfig(
+    fileSizeThreshold = 1024 * 1024,       // 1 MB threshold
+    maxFileSize = 1024 * 1024 * 25,        // 25 MB max file size
+    maxRequestSize = 1024 * 1024 * 30      // 30 MB max request size
+)
 public class VoiceTimesheetServlet extends HttpServlet {
 
     private final VoiceService voiceService = new VoiceService();
@@ -44,16 +52,33 @@ public class VoiceTimesheetServlet extends HttpServlet {
     protected void doPost(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
         User employee = SessionUtil.getUser(req.getSession(false));
-        String action = req.getParameter("action");
+        String action = getFormOrPartValue(req, "action");
         resp.setContentType("application/json");
 
         if ("process".equals(action)) {
-            String transcript  = req.getParameter("transcript");
-            String audioBase64 = req.getParameter("audioBase64");
-            String mimeType    = req.getParameter("mimeType");
+            String transcript  = getFormOrPartValue(req, "transcript");
+            String mimeType    = getFormOrPartValue(req, "mimeType");
+            String audioBase64 = getFormOrPartValue(req, "audioBase64");
 
             byte[] audioBytes = null;
-            if (audioBase64 != null && !audioBase64.isBlank()) {
+
+            // 1. First check if a binary audio file was uploaded via multipart FormData
+            try {
+                Part audioPart = req.getPart("audioFile");
+                if (audioPart != null && audioPart.getSize() > 0) {
+                    try (InputStream is = audioPart.getInputStream()) {
+                        audioBytes = is.readAllBytes();
+                    }
+                    if (mimeType == null || mimeType.isBlank()) {
+                        mimeType = audioPart.getContentType();
+                    }
+                }
+            } catch (Exception ignored) {
+                // Not a multipart request or audioFile part absent — fall back to audioBase64
+            }
+
+            // 2. Fall back to audioBase64 if binary audio part was not provided
+            if ((audioBytes == null || audioBytes.length == 0) && audioBase64 != null && !audioBase64.isBlank()) {
                 try {
                     String cleanBase64 = audioBase64.contains(",") ? audioBase64.split(",")[1] : audioBase64;
                     audioBytes = java.util.Base64.getDecoder().decode(cleanBase64.trim());
@@ -63,7 +88,7 @@ public class VoiceTimesheetServlet extends HttpServlet {
             }
 
             if ((transcript == null || transcript.isBlank()) && (audioBytes == null || audioBytes.length == 0)) {
-                resp.getWriter().write(JsonUtil.error("Please record speech or enter a text recap."));
+                resp.getWriter().write(JsonUtil.error("Please speak into the microphone or enter a text recap."));
                 return;
             }
 
@@ -71,14 +96,14 @@ public class VoiceTimesheetServlet extends HttpServlet {
             resp.getWriter().write(JsonUtil.toJson(result));
 
         } else if ("retry".equals(action)) {
-            int recordId = Integer.parseInt(req.getParameter("recordId"));
+            int recordId = Integer.parseInt(getFormOrPartValue(req, "recordId"));
             ParseResult result = voiceService.retry(recordId, employee.getId());
             resp.getWriter().write(JsonUtil.toJson(result));
 
         } else if ("confirm".equals(action)) {
-            int recordId = Integer.parseInt(req.getParameter("recordId"));
-            String blocksJson = req.getParameter("blocksJson");
-            String dateStr    = req.getParameter("entryDate");
+            int recordId = Integer.parseInt(getFormOrPartValue(req, "recordId"));
+            String blocksJson = getFormOrPartValue(req, "blocksJson");
+            String dateStr    = getFormOrPartValue(req, "entryDate");
             LocalDate date    = (dateStr != null && !dateStr.isBlank()) ? LocalDate.parse(dateStr) : LocalDate.now();
 
             List<WorkBlock> blocks = parseBlocksJson(blocksJson);
@@ -89,14 +114,33 @@ public class VoiceTimesheetServlet extends HttpServlet {
         }
     }
 
+    private String getFormOrPartValue(HttpServletRequest req, String name) {
+        String val = req.getParameter(name);
+        if (val != null) return val;
+        try {
+            Part part = req.getPart(name);
+            if (part != null) {
+                try (InputStream is = part.getInputStream()) {
+                    return new String(is.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8).trim();
+                }
+            }
+        } catch (Exception ignored) {}
+        return null;
+    }
+
     private List<WorkBlock> parseBlocksJson(String json) {
         List<WorkBlock> blocks = new ArrayList<>();
+        if (json == null || json.isBlank()) return blocks;
+
         JsonUtil.parse(json).ifPresent(node -> {
             if (node.isArray()) {
                 for (JsonNode n : node) {
                     WorkBlock wb = new WorkBlock();
                     wb.setTitle(n.path("title").asText());
                     wb.setCategory(n.path("category").asText());
+                    if (n.has("categoryId") && !n.path("categoryId").isNull()) {
+                        wb.setCategoryId(n.path("categoryId").asInt());
+                    }
                     wb.setDurationHours(n.path("durationHours").asDouble(1.0));
                     wb.setDescription(n.path("description").asText());
                     if (n.has("matchedTaskId") && !n.path("matchedTaskId").isNull()) {

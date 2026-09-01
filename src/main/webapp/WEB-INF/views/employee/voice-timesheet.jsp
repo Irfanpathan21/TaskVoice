@@ -91,8 +91,14 @@
     </div>
   </div>
 
-  <script src="${pageContext.request.contextPath}/js/voice-recorder.js"></script>
+  <script src="${pageContext.request.contextPath}/js/voice-recorder.js?v=10"></script>
   <script>
+    window.onerror = function(msg, url, lineNo, columnNo, error) {
+      console.error('JS Error:', msg, 'at line', lineNo);
+      const el = document.getElementById('statusText');
+      if (el) el.textContent = '⚠️ JS Error: ' + msg + ' (line ' + lineNo + ')';
+      return false;
+    };
     let currentRecordId = null;
     let generatedBlocks = [];
 

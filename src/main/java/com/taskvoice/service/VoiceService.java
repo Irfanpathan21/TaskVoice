@@ -172,11 +172,14 @@ public class VoiceService {
         private String title, category, description, originalTranscriptFragment, matchedTaskTitle;
         private double durationHours;
         private Integer matchedTaskId;
+        private Integer categoryId;
 
         public String getTitle() { return title; }
         public void setTitle(String t) { this.title = t; }
         public String getCategory() { return category; }
         public void setCategory(String c) { this.category = c; }
+        public Integer getCategoryId() { return categoryId; }
+        public void setCategoryId(Integer c) { this.categoryId = c; }
         public String getDescription() { return description; }
         public void setDescription(String d) { this.description = d; }
         public String getOriginalTranscriptFragment() { return originalTranscriptFragment; }
