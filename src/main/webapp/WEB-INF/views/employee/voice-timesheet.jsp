@@ -1,6 +1,5 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
-<%@ taglib prefix="fn" uri="jakarta.tags.functions" %>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -76,7 +75,7 @@
     </div>
   </div>
 
-  <script src="${pageContext.request.contextPath}/js/voice-recorder.js?v=11"></script>
+  <script src="${pageContext.request.contextPath}/js/voice-recorder.js?v=12"></script>
   <script>
     window.onerror = function(msg, url, lineNo, columnNo, error) {
       console.error('JS Error:', msg, 'at line', lineNo);
@@ -91,13 +90,13 @@
     // Pre-loaded DB Category & Task lists for select dropdowns
     const availableCategories = [
       <c:forEach items="${categories}" var="c" varStatus="st">
-        { id: <c:out value="${c.id}"/>, name: "<c:out value="${fn:escapeXml(c.name)}"/>" }<c:if test="${!st.last}">,</c:if>
+        { id: <c:out value="${c.id}"/>, name: "<c:out value="${c.name}"/>" }<c:if test="${!st.last}">,</c:if>
       </c:forEach>
     ];
 
     const availableTasks = [
       <c:forEach items="${assignedTasks}" var="t" varStatus="st">
-        { id: <c:out value="${t.id}"/>, title: "<c:out value="${fn:escapeXml(t.title)}"/>" }<c:if test="${!st.last}">,</c:if>
+        { id: <c:out value="${t.id}"/>, title: "<c:out value="${t.title}"/>" }<c:if test="${!st.last}">,</c:if>
       </c:forEach>
     ];
 
@@ -207,7 +206,6 @@
       grid.appendChild(card);
       recalculateTotalHours();
 
-      // Scroll to the new entry
       card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 

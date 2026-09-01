@@ -13,41 +13,28 @@
 <body>
   <div class="glass-card" style="max-width: 520px; padding: 40px; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; background: rgba(30, 41, 59, 0.8);">
     <%
-      int statusCode = 500;
-      String errorTitle = "Internal Server Error";
-      String errorDesc = "An unexpected error occurred while processing your request.";
-      
-      if (pageContext.getErrorData() != null) {
-        statusCode = pageContext.getErrorData().getStatusCode();
-      }
-      
-      if (statusCode == 403) {
-        errorTitle = "Access Denied";
-        errorDesc = "You do not have permission to view this resource.";
-      } else if (statusCode == 404) {
-        errorTitle = "Page Not Found";
-        errorDesc = "The requested URL or resource does not exist.";
-      } else if (statusCode == 500) {
-        errorTitle = "Server Processing Error";
-        errorDesc = "The server encountered an issue. Please try refreshing or logging back in.";
-      }
-      
-      Throwable exceptionObj = (Throwable) request.getAttribute("jakarta.servlet.error.exception");
-      if (exceptionObj == null) {
-        exceptionObj = exception;
+      Object statusObj = request.getAttribute("jakarta.servlet.error.status_code");
+      Object messageObj = request.getAttribute("jakarta.servlet.error.message");
+      Object exceptionObj = request.getAttribute("jakarta.servlet.error.exception");
+      if (exceptionObj == null) exceptionObj = exception;
+
+      int statusCode = statusObj != null ? Integer.parseInt(statusObj.toString()) : 500;
+      String errorMessage = messageObj != null ? messageObj.toString() : "";
+      if (exceptionObj != null && errorMessage.isBlank()) {
+        errorMessage = ((Throwable)exceptionObj).getMessage();
       }
     %>
     <h1 style="font-size: 56px; color: #f43f5e; margin-bottom: 12px; font-weight: 800;">
       <%= statusCode %>
     </h1>
-    <h2 style="font-size: 20px; margin-bottom: 12px; color: #f8fafc;"><%= errorTitle %></h2>
+    <h2 style="font-size: 20px; margin-bottom: 12px; color: #f8fafc;">Server Processing Error</h2>
     <p style="color: #94a3b8; font-size: 14px; margin-bottom: 24px;">
-      <%= errorDesc %>
+      An issue occurred while processing your request.
     </p>
 
-    <% if (exceptionObj != null) { %>
-      <div style="text-align: left; background: rgba(0,0,0,0.4); padding: 12px; border-radius: 6px; font-family: monospace; font-size: 12px; color: #fb7185; margin-bottom: 24px; overflow-x: auto; max-height: 120px;">
-        <%= exceptionObj.getMessage() != null ? exceptionObj.getMessage() : exceptionObj.toString() %>
+    <% if (errorMessage != null && !errorMessage.isBlank()) { %>
+      <div style="text-align: left; background: rgba(244, 63, 94, 0.1); border: 1px solid rgba(244, 63, 94, 0.3); padding: 12px; border-radius: 6px; font-family: monospace; font-size: 13px; color: #fb7185; margin-bottom: 24px;">
+        <strong>Details:</strong> <%= errorMessage %>
       </div>
     <% } %>
 
