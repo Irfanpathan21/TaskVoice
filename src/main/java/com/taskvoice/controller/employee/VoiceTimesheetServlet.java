@@ -41,17 +41,33 @@ public class VoiceTimesheetServlet extends HttpServlet {
             throws ServletException, IOException {
         User employee = SessionUtil.getUser(req.getSession(false));
 
-        req.setAttribute("assignedTasks", taskService.findByAssignee(employee.getId(), 1, 100));
-        req.setAttribute("categories", categoryDAO.findAll());
-        req.setAttribute("drafts", voiceService.getDrafts(employee.getId()));
+        if (employee == null) {
+            resp.sendRedirect(req.getContextPath() + "/login");
+            return;
+        }
 
-        req.getRequestDispatcher("/WEB-INF/views/employee/voice-timesheet.jsp").forward(req, resp);
+        try {
+            req.setAttribute("assignedTasks", taskService.findByAssignee(employee.getId(), 1, 100));
+            req.setAttribute("categories", categoryDAO.findAll());
+            req.setAttribute("drafts", voiceService.getDrafts(employee.getId()));
+
+            req.getRequestDispatcher("/WEB-INF/views/employee/voice-timesheet.jsp").forward(req, resp);
+        } catch (Exception e) {
+            req.setAttribute("errorMessage", "Failed to load voice timesheet: " + e.getMessage());
+            resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, e.getMessage());
+        }
     }
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
         User employee = SessionUtil.getUser(req.getSession(false));
+        if (employee == null) {
+            resp.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            resp.getWriter().write(JsonUtil.error("Session expired. Please log in again."));
+            return;
+        }
+
         String action = getFormOrPartValue(req, "action");
         resp.setContentType("application/json");
 
@@ -62,7 +78,7 @@ public class VoiceTimesheetServlet extends HttpServlet {
 
             byte[] audioBytes = null;
 
-            // 1. First check if a binary audio file was uploaded via multipart FormData
+            // 1. Check if a binary audio file was uploaded via multipart FormData
             try {
                 Part audioPart = req.getPart("audioFile");
                 if (audioPart != null && audioPart.getSize() > 0) {
