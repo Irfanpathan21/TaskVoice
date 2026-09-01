@@ -50,7 +50,7 @@ public class GroqWhisperClient {
                 .POST(HttpRequest.BodyPublishers.ofByteArray(multipartBody))
                 .build();
 
-        log.info("[{}] Transcribing audio via Groq Whisper API ({} bytes)...", correlationId, audioBytes.length);
+        log.info("[{}] Transcribing audio via Groq Whisper API ({} bytes, mime={})...", correlationId, audioBytes.length, mimeType);
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
         if (response.statusCode() == 200) {
@@ -82,9 +82,12 @@ public class GroqWhisperClient {
         baos.write(("json" + lineEnd).getBytes(StandardCharsets.UTF_8));
 
         // Form field: file
-        String ext = mimeType != null && mimeType.contains("mp3") ? ".mp3" :
-                     mimeType != null && mimeType.contains("wav") ? ".wav" :
-                     mimeType != null && mimeType.contains("m4a") ? ".m4a" : ".webm";
+        String ext;
+        if (mimeType != null && mimeType.contains("mp4"))       ext = ".m4a";
+        else if (mimeType != null && mimeType.contains("mp3"))  ext = ".mp3";
+        else if (mimeType != null && mimeType.contains("ogg"))  ext = ".ogg";
+        else if (mimeType != null && mimeType.contains("wav"))  ext = ".wav";
+        else                                                      ext = ".webm";
         String contentType = mimeType != null && !mimeType.isBlank() ? mimeType : "audio/webm";
 
         baos.write((twoHyphens + boundary + lineEnd).getBytes(StandardCharsets.UTF_8));

@@ -11,7 +11,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Loads environment variables from .env at application startup.
  * Values are stored as servlet context attributes so they are accessible
- * from any component via AppConfig.get(key).
+ * from any component via ConfigListener.get(key).
  */
 @WebListener
 public class ConfigListener implements ServletContextListener {
@@ -39,6 +39,7 @@ public class ConfigListener implements ServletContextListener {
             }
 
             store(dotenv, "GEMINI_API_KEY");
+            store(dotenv, "GROQ_API_KEY");
             store(dotenv, "DB_URL");
             store(dotenv, "DB_USERNAME");
             store(dotenv, "DB_PASSWORD");

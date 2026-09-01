@@ -19,8 +19,8 @@ public final class GeminiResponseValidator {
 
     /**
      * Validate Voice Segmentation response.
-     * Expects a JSON array of objects with: title (string), category (string), durationHours (number), description (string).
-     * Strips markdown fences if present.
+     * Expects a JSON array of objects with: title (string). Missing duration/category is supported
+     * for interactive clarification.
      */
     public static JsonNode validateVoiceSegmentation(String raw) throws GeminiValidationException {
         String cleaned = stripMarkdown(raw);
@@ -32,10 +32,9 @@ public final class GeminiResponseValidator {
         JsonNode arr = parsed.get();
         if (arr.isEmpty()) throw new GeminiValidationException("AI returned an empty work-entry list.");
         for (JsonNode entry : arr) {
-            requireString(entry, "title");
-            requireString(entry, "category");
-            requirePositiveNumber(entry, "durationHours");
-            requireString(entry, "description");
+            if (!entry.has("title") || entry.path("title").asText("").isBlank()) {
+                throw new GeminiValidationException("AI returned an entry with no title.");
+            }
         }
         return arr;
     }
@@ -123,13 +122,6 @@ public final class GeminiResponseValidator {
     private static void requireNumber(JsonNode obj, String field) throws GeminiValidationException {
         if (!obj.has(field) || !obj.get(field).isNumber()) {
             throw new GeminiValidationException("Missing or non-numeric field: " + field);
-        }
-    }
-
-    private static void requirePositiveNumber(JsonNode obj, String field) throws GeminiValidationException {
-        requireNumber(obj, field);
-        if (obj.get(field).asDouble() <= 0) {
-            throw new GeminiValidationException("Field must be positive: " + field);
         }
     }
 
