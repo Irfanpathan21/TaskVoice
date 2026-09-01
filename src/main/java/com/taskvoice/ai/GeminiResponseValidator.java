@@ -25,6 +25,17 @@ public final class GeminiResponseValidator {
     public static JsonNode validateVoiceSegmentation(String raw) throws GeminiValidationException {
         String cleaned = stripMarkdown(raw);
         Optional<JsonNode> parsed = JsonUtil.parse(cleaned);
+        
+        // If not directly an array, try extracting array substring [ ... ]
+        if (parsed.isEmpty() || !parsed.get().isArray()) {
+            int startIdx = cleaned.indexOf('[');
+            int endIdx = cleaned.lastIndexOf(']');
+            if (startIdx >= 0 && endIdx > startIdx) {
+                String sub = cleaned.substring(startIdx, endIdx + 1);
+                parsed = JsonUtil.parse(sub);
+            }
+        }
+
         if (parsed.isEmpty() || !parsed.get().isArray()) {
             log.error("Voice segmentation response is not a JSON array: {}", truncate(cleaned));
             throw new GeminiValidationException("AI returned an invalid format for voice segmentation.");
@@ -67,6 +78,13 @@ public final class GeminiResponseValidator {
         String cleaned = stripMarkdown(raw);
         Optional<JsonNode> parsed = JsonUtil.parse(cleaned);
         if (parsed.isEmpty() || !parsed.get().isObject()) {
+            int startIdx = cleaned.indexOf('{');
+            int endIdx = cleaned.lastIndexOf('}');
+            if (startIdx >= 0 && endIdx > startIdx) {
+                parsed = JsonUtil.parse(cleaned.substring(startIdx, endIdx + 1));
+            }
+        }
+        if (parsed.isEmpty() || !parsed.get().isObject()) {
             throw new GeminiValidationException("AI returned invalid sentiment format.");
         }
         JsonNode obj = parsed.get();
@@ -89,6 +107,13 @@ public final class GeminiResponseValidator {
     public static JsonNode validateAppraisalAnalysis(String raw) throws GeminiValidationException {
         String cleaned = stripMarkdown(raw);
         Optional<JsonNode> parsed = JsonUtil.parse(cleaned);
+        if (parsed.isEmpty() || !parsed.get().isObject()) {
+            int startIdx = cleaned.indexOf('{');
+            int endIdx = cleaned.lastIndexOf('}');
+            if (startIdx >= 0 && endIdx > startIdx) {
+                parsed = JsonUtil.parse(cleaned.substring(startIdx, endIdx + 1));
+            }
+        }
         if (parsed.isEmpty() || !parsed.get().isObject()) {
             throw new GeminiValidationException("AI returned invalid appraisal format.");
         }

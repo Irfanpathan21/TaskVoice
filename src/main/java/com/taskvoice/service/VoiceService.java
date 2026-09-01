@@ -15,9 +15,9 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * VoiceService — manages the full voice timesheet flow:
+ * VoiceService — manages the full voice and manual timesheet flow:
  * 1. Save transcript/audio as VoiceRecord (DRAFT)
- * 2. Send to Gemini for segmentation
+ * 2. Send to Gemini/Groq for segmentation
  * 3. Validate response
  * 4. Return parsed blocks for employee review
  * 5. On confirmation, save to timesheet_entries
@@ -35,7 +35,7 @@ public class VoiceService {
     private final GroqWhisperClient whisperClient = new GroqWhisperClient();
 
     /**
-     * Process audio bytes using Groq Whisper API (whisper-large-v3-turbo), with text fallback.
+     * Process audio bytes using Groq Whisper API (whisper-large-v3-turbo / whisper-large-v3), with text fallback.
      */
     public ParseResult processAudioData(int userId, byte[] audioBytes, String mimeType, String fallbackTranscript) {
         String correlationId = UUID.randomUUID().toString().substring(0, 8);
@@ -56,13 +56,8 @@ public class VoiceService {
     }
 
     /**
-     * Step 1+2+3: Save transcript, call Gemini, return parsed work blocks.
+     * Step 1+2+3: Save transcript, call Gemini/Groq, return parsed work blocks.
      * On AI failure, transcript is preserved as DRAFT — never lost.
-     *
-     * @param userId the employee
-     * @param transcript raw speech-to-text transcript
-     * @param audioFileRef optional path/ref to audio file (may be null)
-     * @return ParseResult containing either parsed blocks or draft ID for retry
      */
     public ParseResult processTranscript(int userId, String transcript, String audioFileRef) {
         // Save transcript immediately — never lose it
@@ -80,7 +75,7 @@ public class VoiceService {
             List<Task> assignedTasks = taskDAO.findByAssigneeId(userId, 1, 50);
             List<String> taskTitles = assignedTasks.stream().map(Task::getTitle).toList();
 
-            // Build prompt and call Gemini
+            // Build prompt and call Gemini / Groq fallback
             String prompt = GeminiPrompts.voiceSegmentation(transcript, taskTitles);
             String rawResponse = gemini.call(prompt, correlationId);
 
@@ -91,18 +86,25 @@ public class VoiceService {
             List<WorkBlock> workBlocks = new ArrayList<>();
             for (JsonNode b : blocks) {
                 WorkBlock wb = new WorkBlock();
-                wb.setTitle(b.path("title").asText());
-                wb.setCategory(b.path("category").asText());
-                wb.setDurationHours(b.path("durationHours").asDouble());
-                wb.setDescription(b.path("description").asText());
-                wb.setOriginalTranscriptFragment(transcript); // full transcript shown alongside
+                wb.setTitle(b.path("title").asText("Work Entry"));
+                wb.setCategory(b.path("category").asText("Development"));
+                double dur = b.path("durationHours").asDouble(1.0);
+                wb.setDurationHours(dur > 0 ? dur : 1.0);
+                wb.setDescription(b.path("description").asText(""));
+                wb.setOriginalTranscriptFragment(transcript);
+                
                 String matchedTask = b.path("matchedTaskTitle").asText(null);
-                if (matchedTask != null) {
-                    // Find matching task ID
+                if (matchedTask != null && !matchedTask.isBlank()) {
                     assignedTasks.stream()
-                        .filter(t -> t.getTitle().equalsIgnoreCase(matchedTask))
+                        .filter(t -> t.getTitle().equalsIgnoreCase(matchedTask.trim()))
                         .findFirst()
-                        .ifPresent(t -> { wb.setMatchedTaskId(t.getId()); wb.setMatchedTaskTitle(t.getTitle()); });
+                        .ifPresent(t -> {
+                            wb.setMatchedTaskId(t.getId());
+                            wb.setMatchedTaskTitle(t.getTitle());
+                            if (t.getCategoryId() != null && t.getCategoryId() > 0) {
+                                wb.setCategoryId(t.getCategoryId());
+                            }
+                        });
                 }
                 workBlocks.add(wb);
             }
@@ -112,11 +114,22 @@ public class VoiceService {
 
             return ParseResult.success(recordId, workBlocks, transcript);
 
-        } catch (GeminiException | GeminiValidationException e) {
+        } catch (Exception e) {
             log.error("[{}] Voice AI processing failed for user {}: {}", correlationId, userId, e.getMessage());
             voiceRecordDAO.updateStatus(recordId, "FAILED", e.getMessage());
             voiceRecordDAO.incrementRetryCount(recordId);
-            return ParseResult.failure(recordId, transcript, "AI processing failed. Your transcript has been saved. You can retry or enter manually.");
+
+            // Fallback: Return a single work block with the transcript so user doesn't lose work
+            List<WorkBlock> fallbackBlocks = new ArrayList<>();
+            WorkBlock fallback = new WorkBlock();
+            fallback.setTitle("Work Recap");
+            fallback.setCategory("Development");
+            fallback.setDurationHours(1.0);
+            fallback.setDescription(transcript != null ? transcript : "");
+            fallback.setOriginalTranscriptFragment(transcript);
+            fallbackBlocks.add(fallback);
+
+            return ParseResult.success(recordId, fallbackBlocks, transcript);
         }
     }
 
@@ -139,24 +152,57 @@ public class VoiceService {
 
     /**
      * Step 5: Employee has reviewed and confirmed blocks — save to timesheet_entries.
+     * Safely handles both Voice-generated entries and purely Manual entries.
      */
     public List<TimesheetEntry> confirmAndSave(int userId, int voiceRecordId,
                                                 List<WorkBlock> confirmedBlocks, LocalDate entryDate) {
         List<TimesheetEntry> saved = new ArrayList<>();
+        
+        // Check if voiceRecordId exists in DB
+        Integer validVoiceRecordId = null;
+        if (voiceRecordId > 0) {
+            Optional<VoiceRecord> vrOpt = voiceRecordDAO.findById(voiceRecordId);
+            if (vrOpt.isPresent() && vrOpt.get().getUserId() == userId) {
+                validVoiceRecordId = voiceRecordId;
+            }
+        }
+
         for (WorkBlock wb : confirmedBlocks) {
             TimesheetEntry te = new TimesheetEntry();
-            te.setUserId(userId); te.setVoiceRecordId(voiceRecordId);
+            te.setUserId(userId);
+            te.setVoiceRecordId(validVoiceRecordId);
             te.setEntryDate(entryDate != null ? entryDate : LocalDate.now());
-            te.setTitle(wb.getTitle()); te.setDescription(wb.getDescription());
-            te.setDurationHours(wb.getDurationHours()); te.setConfirmed(true);
-            if (wb.getMatchedTaskId() != null) te.setTaskId(wb.getMatchedTaskId());
-            // category lookup by name (simplified)
+            
+            String title = wb.getTitle();
+            te.setTitle(title != null && !title.isBlank() ? title.trim() : "Work Entry");
+            
+            te.setDescription(wb.getDescription() != null ? wb.getDescription().trim() : "");
+            
+            double dur = wb.getDurationHours();
+            te.setDurationHours(dur > 0 ? dur : 1.0);
+            te.setConfirmed(true);
+
+            if (wb.getCategoryId() != null && wb.getCategoryId() > 0) {
+                te.setCategoryId(wb.getCategoryId());
+            }
+
+            if (wb.getMatchedTaskId() != null && wb.getMatchedTaskId() > 0) {
+                te.setTaskId(wb.getMatchedTaskId());
+                // Look up task to populate project_id
+                taskDAO.findById(wb.getMatchedTaskId()).ifPresent(t -> {
+                    te.setProjectId(t.getProjectId());
+                    if (te.getCategoryId() == null && t.getCategoryId() != null) {
+                        te.setCategoryId(t.getCategoryId());
+                    }
+                });
+            }
+
             int id = timesheetDAO.insert(te);
             te.setId(id);
             saved.add(te);
 
             // Rollup actual hours on task if linked
-            if (wb.getMatchedTaskId() != null) {
+            if (wb.getMatchedTaskId() != null && wb.getMatchedTaskId() > 0) {
                 double hours = timesheetDAO.sumHoursByTaskId(wb.getMatchedTaskId());
                 taskDAO.updateActualHours(wb.getMatchedTaskId(), hours);
             }
@@ -164,13 +210,15 @@ public class VoiceService {
         return saved;
     }
 
-    public List<VoiceRecord> getDrafts(int userId) { return voiceRecordDAO.findDraftsByUserId(userId); }
+    public List<VoiceRecord> getDrafts(int userId) { 
+        return voiceRecordDAO.findDraftsByUserId(userId); 
+    }
 
     // ====== Inner classes ======
 
     public static class WorkBlock {
         private String title, category, description, originalTranscriptFragment, matchedTaskTitle;
-        private double durationHours;
+        private double durationHours = 1.0;
         private Integer matchedTaskId;
         private Integer categoryId;
 

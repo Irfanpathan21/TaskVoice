@@ -39,34 +39,44 @@ public class GroqWhisperClient {
             apiKey = DEFAULT_GROQ_KEY;
         }
 
-        String boundary = "----TaskVoiceBoundary" + System.currentTimeMillis();
-        byte[] multipartBody = buildMultipartBody(boundary, audioBytes, mimeType);
+        String[] models = {"whisper-large-v3-turbo", "whisper-large-v3"};
+        
+        for (String model : models) {
+            try {
+                String boundary = "----TaskVoiceBoundary" + System.currentTimeMillis();
+                byte[] multipartBody = buildMultipartBody(boundary, audioBytes, mimeType, model);
 
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(GROQ_URL))
-                .header("Authorization", "Bearer " + apiKey)
-                .header("Content-Type", "multipart/form-data; boundary=" + boundary)
-                .timeout(Duration.ofSeconds(30))
-                .POST(HttpRequest.BodyPublishers.ofByteArray(multipartBody))
-                .build();
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create(GROQ_URL))
+                        .header("Authorization", "Bearer " + apiKey)
+                        .header("Content-Type", "multipart/form-data; boundary=" + boundary)
+                        .timeout(Duration.ofSeconds(30))
+                        .POST(HttpRequest.BodyPublishers.ofByteArray(multipartBody))
+                        .build();
 
-        log.info("[{}] Transcribing audio via Groq Whisper API ({} bytes, mime={})...", correlationId, audioBytes.length, mimeType);
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                log.info("[{}] Transcribing audio via Groq Whisper ({}) ({} bytes, mime={})...", 
+                         correlationId, model, audioBytes.length, mimeType);
+                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
-        if (response.statusCode() == 200) {
-            Optional<JsonNode> parsed = JsonUtil.parse(response.body());
-            if (parsed.isPresent() && parsed.get().has("text")) {
-                String transcript = parsed.get().get("text").asText();
-                log.info("[{}] Groq Whisper transcription success: '{}'", correlationId, transcript);
-                return transcript;
+                if (response.statusCode() == 200) {
+                    Optional<JsonNode> parsed = JsonUtil.parse(response.body());
+                    if (parsed.isPresent() && parsed.get().has("text")) {
+                        String transcript = parsed.get().get("text").asText();
+                        log.info("[{}] Groq Whisper transcription success with {}: '{}'", correlationId, model, transcript);
+                        return transcript;
+                    }
+                } else {
+                    log.warn("[{}] Groq Whisper ({}) returned status {}: {}", correlationId, model, response.statusCode(), response.body());
+                }
+            } catch (Exception e) {
+                log.warn("[{}] Groq Whisper model {} error: {}", correlationId, model, e.getMessage());
             }
         }
 
-        log.error("[{}] Groq Whisper API error status {}: {}", correlationId, response.statusCode(), response.body());
-        throw new RuntimeException("Groq Whisper API transcription failed: HTTP " + response.statusCode());
+        throw new RuntimeException("Groq Whisper API transcription failed for all models.");
     }
 
-    private byte[] buildMultipartBody(String boundary, byte[] audioBytes, String mimeType) throws IOException {
+    private byte[] buildMultipartBody(String boundary, byte[] audioBytes, String mimeType, String model) throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         String lineEnd = "\r\n";
         String twoHyphens = "--";
@@ -74,7 +84,7 @@ public class GroqWhisperClient {
         // Form field: model
         baos.write((twoHyphens + boundary + lineEnd).getBytes(StandardCharsets.UTF_8));
         baos.write(("Content-Disposition: form-data; name=\"model\"" + lineEnd + lineEnd).getBytes(StandardCharsets.UTF_8));
-        baos.write(("whisper-large-v3-turbo" + lineEnd).getBytes(StandardCharsets.UTF_8));
+        baos.write((model + lineEnd).getBytes(StandardCharsets.UTF_8));
 
         // Form field: response_format
         baos.write((twoHyphens + boundary + lineEnd).getBytes(StandardCharsets.UTF_8));
@@ -87,7 +97,7 @@ public class GroqWhisperClient {
         else if (mimeType != null && mimeType.contains("mp3"))  ext = ".mp3";
         else if (mimeType != null && mimeType.contains("ogg"))  ext = ".ogg";
         else if (mimeType != null && mimeType.contains("wav"))  ext = ".wav";
-        else                                                      ext = ".webm";
+        else                                                    ext = ".webm";
         String contentType = mimeType != null && !mimeType.isBlank() ? mimeType : "audio/webm";
 
         baos.write((twoHyphens + boundary + lineEnd).getBytes(StandardCharsets.UTF_8));
